@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 193 50% 97%;
+    --foreground: 193 40% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 193 40% 10%;
+
+    --primary: 189 73% 43%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 176 35% 92%;
+    --secondary-foreground: 190 40% 18%;
+
+    --muted: 184 28% 93%;
+    --muted-foreground: 190 18% 38%;
+
+    --accent: 39 95% 56%;
+    --accent-foreground: 28 60% 20%;
+
+    --destructive: 0 76% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 187 24% 83%;
+    --input: 187 24% 83%;
+    --ring: 189 73% 43%;
+
+    --radius: 0.85rem;
+  }
+
+  .dark {
+    --background: 200 34% 8%;
+    --foreground: 193 26% 96%;
+
+    --card: 197 33% 11%;
+    --card-foreground: 193 26% 96%;
+
+    --primary: 183 68% 55%;
+    --primary-foreground: 194 38% 12%;
+
+    --secondary: 198 18% 20%;
+    --secondary-foreground: 193 26% 96%;
+
+    --muted: 199 20% 17%;
+    --muted-foreground: 193 14% 74%;
+
+    --accent: 44 86% 56%;
+    --accent-foreground: 38 100% 14%;
+
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 199 15% 24%;
+    --input: 199 15% 24%;
+    --ring: 183 68% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(circle at 5% 8%, rgba(34, 197, 188, 0.18), transparent 32%),
+      radial-gradient(circle at 92% 12%, rgba(245, 158, 11, 0.2), transparent 30%),
+      radial-gradient(circle at 50% 92%, rgba(20, 184, 166, 0.14), transparent 28%);
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: 'Space Grotesk', ui-sans-serif, system-ui;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/70 shadow-xl;
+  }
+}
