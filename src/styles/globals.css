@@ -85,6 +85,24 @@
 
 @layer utilities {
   .glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/70 shadow-xl;
+    @apply bg-card/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg;
+  }
+  
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-border/50 rounded-full hover:bg-border/80 transition-colors;
+  }
+
+  /* Online Ping Animation for Avatar Badges */
+  .animate-ping-slow {
+    animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
   }
 }
+

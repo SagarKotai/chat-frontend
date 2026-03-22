@@ -61,24 +61,31 @@ export default function ChatPage(): JSX.Element {
         </div>
       </div>
 
-      <div className='grid h-[calc(100vh-64px)] grid-cols-12 gap-3'>
-        <div className='col-span-12 lg:col-span-3'>
+      <div className='flex h-[calc(100vh-64px)] w-full gap-3'>
+        <div className={`w-full lg:w-[25%] lg:block ${selectedChatId ? 'hidden' : 'block'}`}>
           <ChatSidebar />
         </div>
 
-        <div className={`${rightPanelOpen ? 'col-span-12 lg:col-span-6' : 'col-span-12 lg:col-span-9'}`}>
+        <div className={`w-full ${rightPanelOpen ? 'lg:w-[50%]' : 'lg:w-[75%]'} flex-1 lg:flex flex-col ${!selectedChatId ? 'hidden' : 'flex'}`}>
           {selectedChatId ? (
             <ChatCenterPanel chatId={selectedChatId} />
           ) : (
             <div className='glass flex h-full items-center justify-center rounded-xl'>
-              <p className='text-muted-foreground'>Select a chat to start messaging.</p>
+              <div className='flex flex-col items-center gap-4 text-muted-foreground'>
+                <div className='rounded-full bg-secondary p-6'>
+                  <svg className='h-12 w-12 text-primary' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' />
+                  </svg>
+                </div>
+                <p className='text-lg font-medium'>Select a chat to start messaging</p>
+              </div>
             </div>
           )}
         </div>
 
-        {rightPanelOpen && (
-          <div className='col-span-12 lg:col-span-3'>
-            {selectedChatId ? <ChatRightPanel chatId={selectedChatId} /> : null}
+        {rightPanelOpen && selectedChatId && (
+          <div className='hidden lg:block lg:w-[25%]'>
+            <ChatRightPanel chatId={selectedChatId} />
           </div>
         )}
       </div>

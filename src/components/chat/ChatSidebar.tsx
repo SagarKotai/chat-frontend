@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { Search, MessageCircle, Circle } from 'lucide-react';
+import { format, isToday, isYesterday } from 'date-fns';
+import { Search, MessageCircle } from 'lucide-react';
 import { useGetChatsQuery } from '@/services/chatApi';
 import { useGetNotificationsQuery } from '@/services/notificationApi';
 import { useSearchUsersQuery } from '@/services/userApi';
@@ -43,6 +44,13 @@ function SidebarInner(): JSX.Element {
     const chat = await accessOrCreateChat({ userId }).unwrap();
     dispatch(setSelectedChatId(chat.data._id));
     dispatch(setSearchTerm(''));
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isToday(date)) return format(date, 'p');
+    if (isYesterday(date)) return 'Yesterday';
+    return format(date, 'MMM d');
   };
 
   return (
@@ -134,26 +142,43 @@ function SidebarInner(): JSX.Element {
               <button
                 key={chat._id}
                 onClick={() => dispatch(setSelectedChatId(chat._id))}
-                className={`group flex w-full items-center gap-3 rounded-lg p-2 text-left transition ${
-                  selectedChatId === chat._id ? 'bg-primary/12' : 'hover:bg-muted'
+                className={`group flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-all ${
+                  selectedChatId === chat._id 
+                    ? 'bg-primary/10 border border-primary/20 shadow-[0_2px_10px_-3px_rgba(var(--primary),0.1)]' 
+                    : 'hover:bg-muted/60 border border-transparent'
                 }`}
               >
-                <Avatar className='h-10 w-10'>
-                  <AvatarImage src={avatar} />
-                  <AvatarFallback>{title.slice(0, 1)}</AvatarFallback>
-                </Avatar>
-                <div className='min-w-0 flex-1'>
-                  <p className='truncate text-sm font-semibold'>{title}</p>
-                  <p className='truncate text-xs text-muted-foreground'>
-                    {chat.lastMessage?.content || 'No messages yet'}
-                  </p>
+                <div className='relative shrink-0'>
+                  <Avatar className='h-11 w-11 shadow-sm'>
+                    <AvatarImage src={avatar} />
+                    <AvatarFallback>{title.slice(0, 1)}</AvatarFallback>
+                  </Avatar>
+                  {!chat.isGroupChat && chat.participants.some((p) => p.isOnline && p._id !== currentUser?._id) && (
+                    <span className='absolute bottom-0 right-0 flex h-3.5 w-3.5'>
+                      <span className='absolute inline-flex h-full w-full animate-ping-slow rounded-full bg-emerald-400 opacity-75'></span>
+                      <span className='relative inline-flex h-3.5 w-3.5 rounded-full border-[2.5px] border-background bg-emerald-500'></span>
+                    </span>
+                  )}
                 </div>
-                <div className='flex flex-col items-end gap-1'>
-                  {unread > 0 && <Badge>{unread}</Badge>}
-                  {!chat.isGroupChat &&
-                    (chat.participants.some((p) => p.isOnline && p._id !== currentUser?._id) ? (
-                      <Circle className='h-2.5 w-2.5 fill-emerald-400 text-emerald-400' />
-                    ) : null)}
+                <div className='min-w-0 flex-1 py-1'>
+                  <div className='flex items-center justify-between mb-0.5'>
+                    <p className='truncate text-sm font-semibold'>{title}</p>
+                    {chat.lastMessage && (
+                      <span className={`shrink-0 pl-2 text-[10px] ${unread > 0 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                        {formatTime(chat.lastMessage.createdAt)}
+                      </span>
+                    )}
+                  </div>
+                  <div className='flex items-center justify-between gap-2'>
+                    <p className={`truncate text-xs ${unread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                      {chat.lastMessage?.content || 'No messages yet'}
+                    </p>
+                    {unread > 0 && (
+                      <Badge className='flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1 text-[10px] leading-none'>
+                        {unread}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </button>
             );

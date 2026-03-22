@@ -14,9 +14,10 @@ interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
   chatId: string;
+  isGroup?: boolean;
 }
 
-function MessageBubbleInner({ message, isOwn, chatId }: MessageBubbleProps): JSX.Element {
+function MessageBubbleInner({ message, isOwn, chatId, isGroup }: MessageBubbleProps): JSX.Element {
   const dispatch = useAppDispatch();
   const [showPicker, setShowPicker] = useState(false);
   const reactions = useAppSelector((state) => state.messageUi.reactionsByMessageId[message._id] ?? []);
@@ -61,12 +62,28 @@ function MessageBubbleInner({ message, isOwn, chatId }: MessageBubbleProps): JSX
     );
 
   return (
-    <div className={`group mb-2 flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+    <div className={`group mb-2 flex items-end ${isOwn ? 'justify-end' : 'justify-start'}`}>
+      {!isOwn && isGroup && (
+        <div className='mr-2 shrink-0'>
+          {message.sender.avatar ? (
+            <img src={message.sender.avatar} alt={message.sender.name} className='h-6 w-6 rounded-full object-cover shadow-sm' />
+          ) : (
+            <div className='flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary shadow-sm'>
+              {message.sender.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+      )}
       <div
-        className={`relative max-w-[78%] animate-slide-up rounded-2xl px-3 py-2 text-sm shadow-sm ${
-          isOwn ? 'bg-primary text-primary-foreground' : 'bg-card'
+        className={`relative max-w-[78%] animate-slide-up px-3 py-2 text-sm shadow-sm ${
+          isOwn ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm' : 'bg-card border border-border/50 rounded-2xl rounded-bl-sm'
         }`}
       >
+        {!isOwn && isGroup && (
+          <span className='mb-1 block text-[11px] font-semibold text-primary/80'>
+            {message.sender.name}
+          </span>
+        )}
         {message.replyTo?.content && (
           <div className='mb-1 rounded-md border border-border/60 bg-muted/80 p-1 text-xs text-muted-foreground'>
             Reply to: {message.replyTo.content.slice(0, 90)}

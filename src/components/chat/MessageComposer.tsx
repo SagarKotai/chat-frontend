@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import EmojiPicker from 'emoji-picker-react';
 import { toast } from 'sonner';
-import { Paperclip, SendHorizonal, SmilePlus, Mic, StopCircle } from 'lucide-react';
+import { Paperclip, SendHorizonal, SmilePlus, Mic, StopCircle, X, File as FileIcon } from 'lucide-react';
 import { useGetSmartRepliesQuery, useSendMessageMutation } from '@/services/messageApi';
 import { socketManager } from '@/sockets/socketManager';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -117,14 +117,42 @@ export function MessageComposer({ chatId }: MessageComposerProps): JSX.Element {
   };
 
   return (
-    <div className='relative rounded-xl border bg-card p-2'>
+    <div className='relative rounded-2xl border bg-card/40 p-2 shadow-sm backdrop-blur-md'>
       {showEmoji && (
-        <div className='absolute bottom-20 left-2 z-20'>
+        <div className='absolute bottom-[100%] left-0 z-20 mb-2'>
           <EmojiPicker
-            width={300}
+            width={320}
             lazyLoadEmojis
             onEmojiClick={(emojiData) => dispatch(setDraft({ chatId, text: draft + emojiData.emoji }))}
           />
+        </div>
+      )}
+
+      {selectedFile && (
+        <div className='mb-2 flex items-center justify-between rounded-lg border border-border/50 bg-background/50 p-2 text-sm shadow-sm'>
+          <div className='flex items-center gap-2 overflow-hidden'>
+            <FileIcon className='h-4 w-4 shrink-0 text-primary' />
+            <span className='truncate font-medium'>{selectedFile.name}</span>
+            <span className='shrink-0 text-xs text-muted-foreground'>
+              ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+            </span>
+          </div>
+          <Button variant='ghost' size='icon' className='h-6 w-6 shrink-0 rounded-full hover:bg-destructive/10 hover:text-destructive' onClick={() => setSelectedFile(undefined)}>
+            <X className='h-3.5 w-3.5' />
+          </Button>
+        </div>
+      )}
+
+      {isRecording && (
+        <div className='mb-2 flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-sm text-destructive'>
+          <div className='flex items-center gap-3'>
+            <span className='flex h-2.5 w-2.5 items-center justify-center relative'>
+              <span className='absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-destructive opacity-75'></span>
+              <span className='relative inline-flex h-2 w-2 rounded-full bg-destructive'></span>
+            </span>
+            <span className='font-medium animate-pulse'>Recording voice note...</span>
+          </div>
+          <span className='text-xs opacity-70'>Click red icon to stop & attach</span>
         </div>
       )}
 
@@ -151,28 +179,32 @@ export function MessageComposer({ chatId }: MessageComposerProps): JSX.Element {
             dispatch(setDraft({ chatId, text: e.target.value }));
             socketManager.emitTypingStart(chatId);
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              void submit();
+            }
+          }}
           onBlur={() => socketManager.emitTypingStop(chatId)}
           placeholder='Type a message...'
-          className='min-h-[44px] max-h-32 resize-none'
+          className='min-h-[44px] max-h-32 flex-1 resize-none border-0 bg-transparent px-2 py-3 shadow-none focus-visible:ring-0 text-base md:text-sm'
         />
 
-        <Button
-          size='icon'
-          variant={isRecording ? 'destructive' : 'ghost'}
-          onClick={() => (isRecording ? stopRecording() : void startRecording())}
-          title='Record voice note'
-        >
-          {isRecording ? <StopCircle className='h-4 w-4' /> : <Mic className='h-4 w-4' />}
-        </Button>
+        <div className='flex items-center gap-1 shrink-0'>
+          <Button
+            size='icon'
+            variant={isRecording ? 'destructive' : 'ghost'}
+            className='rounded-full h-9 w-9'
+            onClick={() => (isRecording ? stopRecording() : void startRecording())}
+            title='Record voice note'
+          >
+            {isRecording ? <StopCircle className='h-4 w-4' /> : <Mic className='h-4 w-4' />}
+          </Button>
 
-        <Button size='icon' onClick={() => void submit()} disabled={isLoading}>
-          <SendHorizonal className='h-4 w-4' />
-        </Button>
-      </div>
-
-      <div className='mt-2 flex items-center justify-between text-xs text-muted-foreground'>
-        <div>{selectedFile ? `Attachment: ${selectedFile.name}` : 'No attachment'}</div>
-        <div>{isRecording ? 'Recording voice note...' : 'Voice note ready'}</div>
+          <Button size='icon' className='rounded-full h-9 w-9 bg-primary text-primary-foreground hover:bg-primary/90' onClick={() => void submit()} disabled={isLoading || (!draft.trim() && !selectedFile)}>
+            <SendHorizonal className='h-4 w-4 ml-0.5' />
+          </Button>
+        </div>
       </div>
 
       {(smartRepliesData?.data?.length ?? 0) > 0 && (
