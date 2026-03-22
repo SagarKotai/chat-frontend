@@ -18,6 +18,10 @@ export const chatApi = baseApi.injectEndpoints({
             ]
           : [{ type: 'Chats' as const, id: 'LIST' }],
     }),
+    searchGroupChats: builder.query<ApiResponse<Chat[]>, string>({
+      query: (q) => ({ url: `/chats/search/groups?q=${encodeURIComponent(q)}` }),
+      providesTags: ['Chats'],
+    }),
     getChatById: builder.query<ApiResponse<Chat>, string>({
       query: (chatId) => ({ url: `/chats/${chatId}` }),
       providesTags: (_res, _err, chatId) => [{ type: 'Chats', id: chatId }],
@@ -61,16 +65,38 @@ export const chatApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_res, _err, args) => [{ type: 'Chats', id: args.id }],
     }),
+    muteParticipant: builder.mutation<
+      ApiResponse<Chat>,
+      { id: string; userId: string; minutes?: number; reason?: string }
+    >({
+      query: ({ id, userId, minutes, reason }) => ({
+        url: `/chats/${id}/mute`,
+        method: 'PATCH',
+        body: { userId, minutes, reason },
+      }),
+      invalidatesTags: (_res, _err, args) => [{ type: 'Chats', id: args.id }],
+    }),
+    unmuteParticipant: builder.mutation<ApiResponse<Chat>, { id: string; userId: string }>({
+      query: ({ id, userId }) => ({
+        url: `/chats/${id}/unmute`,
+        method: 'PATCH',
+        body: { userId },
+      }),
+      invalidatesTags: (_res, _err, args) => [{ type: 'Chats', id: args.id }],
+    }),
   }),
 });
 
 export const {
   useAccessOrCreateChatMutation,
   useGetChatsQuery,
+  useSearchGroupChatsQuery,
   useGetChatByIdQuery,
   useCreateGroupChatMutation,
   useRenameGroupChatMutation,
   useAddParticipantsMutation,
   useRemoveParticipantMutation,
   usePromoteAdminMutation,
+  useMuteParticipantMutation,
+  useUnmuteParticipantMutation,
 } = chatApi;

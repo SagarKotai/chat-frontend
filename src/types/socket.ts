@@ -14,6 +14,7 @@ export interface MessageDeliveredEvent {
 export interface MessageReadEvent {
   chatId: string;
   readBy: string;
+  messageIds?: string[];
 }
 
 export interface NotificationSocketEvent {

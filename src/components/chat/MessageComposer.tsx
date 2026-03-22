@@ -2,13 +2,14 @@ import { useMemo, useRef, useState } from 'react';
 import EmojiPicker from 'emoji-picker-react';
 import { toast } from 'sonner';
 import { Paperclip, SendHorizonal, SmilePlus, Mic, StopCircle } from 'lucide-react';
-import { useSendMessageMutation } from '@/services/messageApi';
+import { useGetSmartRepliesQuery, useSendMessageMutation } from '@/services/messageApi';
 import { socketManager } from '@/sockets/socketManager';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setDraft, setVoiceRecording } from '@/features/message/messageUiSlice';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useGetChatByIdQuery } from '@/services/chatApi';
+import { encryptForPublicKey } from '@/lib/e2ee';
 
 interface MessageComposerProps {
   chatId: string;
@@ -23,21 +24,85 @@ export function MessageComposer({ chatId }: MessageComposerProps): JSX.Element {
   const { data: chatData } = useGetChatByIdQuery(chatId);
   const dispatch = useAppDispatch();
   const [sendMessage, { isLoading }] = useSendMessageMutation();
+  const { data: smartRepliesData } = useGetSmartRepliesQuery({ chatId });
   const fileRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaChunksRef = useRef<Blob[]>([]);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   const recipientIds = useMemo(() => {
     const participants = chatData?.data.participants ?? [];
     return participants.map((p) => p._id).filter((id) => id !== userId);
   }, [chatData, userId]);
 
+  const directPeer = useMemo(() => {
+    const chat = chatData?.data;
+    if (!chat || chat.isGroupChat) return undefined;
+    return chat.participants.find((participant) => participant._id !== userId);
+  }, [chatData, userId]);
+
+  const startRecording = async (): Promise<void> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      mediaChunksRef.current = [];
+
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) mediaChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(mediaChunksRef.current, { type: 'audio/webm' });
+        const voiceFile = new File([blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+        setSelectedFile(voiceFile);
+
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+      };
+
+      recorder.start();
+      dispatch(setVoiceRecording(true));
+    } catch {
+      toast.error('Microphone permission denied or unavailable');
+    }
+  };
+
+  const stopRecording = (): void => {
+    mediaRecorderRef.current?.stop();
+    dispatch(setVoiceRecording(false));
+  };
+
   const submit = async (): Promise<void> => {
     if (!draft.trim() && !selectedFile) return;
 
     try {
+      let contentToSend = draft;
+      let encryptedFor: Record<string, string> | undefined;
+      let isEncrypted = false;
+
+      if (draft.trim() && directPeer?.publicKey && userId) {
+        const ownPublicKey = chatData?.data.participants.find((participant) => participant._id === userId)
+          ?.publicKey;
+
+        if (ownPublicKey) {
+          encryptedFor = {
+            [directPeer._id]: await encryptForPublicKey(directPeer.publicKey, draft),
+            [userId]: await encryptForPublicKey(ownPublicKey, draft),
+          };
+          contentToSend = '';
+          isEncrypted = true;
+        }
+      }
+
       const res = await sendMessage({
         chatId,
-        content: draft,
+        content: contentToSend,
         file: selectedFile,
+        isEncrypted,
+        encryptedFor,
       }).unwrap();
 
       socketManager.emitMessageNew(chatId, res.data, recipientIds);
@@ -94,8 +159,8 @@ export function MessageComposer({ chatId }: MessageComposerProps): JSX.Element {
         <Button
           size='icon'
           variant={isRecording ? 'destructive' : 'ghost'}
-          onClick={() => dispatch(setVoiceRecording(!isRecording))}
-          title='Voice message UI'
+          onClick={() => (isRecording ? stopRecording() : void startRecording())}
+          title='Record voice note'
         >
           {isRecording ? <StopCircle className='h-4 w-4' /> : <Mic className='h-4 w-4' />}
         </Button>
@@ -107,8 +172,25 @@ export function MessageComposer({ chatId }: MessageComposerProps): JSX.Element {
 
       <div className='mt-2 flex items-center justify-between text-xs text-muted-foreground'>
         <div>{selectedFile ? `Attachment: ${selectedFile.name}` : 'No attachment'}</div>
-        <div>{isRecording ? 'Voice recording UI active...' : 'Voice message ready'}</div>
+        <div>{isRecording ? 'Recording voice note...' : 'Voice note ready'}</div>
       </div>
+
+      {(smartRepliesData?.data?.length ?? 0) > 0 && (
+        <div className='mt-2 flex flex-wrap gap-2'>
+          {smartRepliesData?.data.slice(0, 3).map((reply) => (
+            <Button
+              key={reply}
+              type='button'
+              size='sm'
+              variant='outline'
+              className='h-7 text-xs'
+              onClick={() => dispatch(setDraft({ chatId, text: reply }))}
+            >
+              {reply}
+            </Button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,14 +1,14 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { CheckCheck, File, Pin } from 'lucide-react';
+import { Check, CheckCheck, File, Pin } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
-import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { toggleReaction } from '@/features/message/messageUiSlice';
 import { pinMessage, unpinMessage } from '@/features/chat/chatUiSlice';
 import type { Message } from '@/types/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { decryptForCurrentUser } from '@/lib/e2ee';
 
 interface MessageBubbleProps {
   message: Message;
@@ -23,6 +23,42 @@ function MessageBubbleInner({ message, isOwn, chatId }: MessageBubbleProps): JSX
   const isPinned = useAppSelector((state) =>
     (state.chatUi.pinnedMessageIdsByChat[chatId] ?? []).includes(message._id),
   );
+  const currentUserId = useAppSelector((state) => state.auth.user?._id);
+  const [decryptedContent, setDecryptedContent] = useState('');
+
+  useEffect(() => {
+    if (!message.isEncrypted || !currentUserId || !message.encryptedFor?.[currentUserId]) {
+      setDecryptedContent('');
+      return;
+    }
+
+    void (async () => {
+      try {
+        const clearText = await decryptForCurrentUser(message.encryptedFor![currentUserId]);
+        setDecryptedContent(clearText);
+      } catch {
+        setDecryptedContent('[Unable to decrypt]');
+      }
+    })();
+  }, [message.isEncrypted, message.encryptedFor, currentUserId]);
+
+  const seenByNames = message.readBy
+    .map((receipt) => {
+      if (typeof receipt.user === 'string') return '';
+      return receipt.user.name;
+    })
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(', ');
+
+  const statusIcon =
+    message.status === 'read' ? (
+      <CheckCheck className='h-3 w-3 text-emerald-300' />
+    ) : message.status === 'delivered' ? (
+      <CheckCheck className='h-3 w-3' />
+    ) : (
+      <Check className='h-3 w-3' />
+    );
 
   return (
     <div className={`group mb-2 flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
@@ -37,12 +73,26 @@ function MessageBubbleInner({ message, isOwn, chatId }: MessageBubbleProps): JSX
           </div>
         )}
 
-        {message.contentType === 'text' && <p className='whitespace-pre-wrap break-words'>{message.content}</p>}
+        {message.contentType === 'text' && (
+          <p className='whitespace-pre-wrap break-words'>
+            {message.isEncrypted ? decryptedContent || '[Encrypted message]' : message.content}
+          </p>
+        )}
 
         {message.contentType !== 'text' && message.fileUrl && (
           <div className='space-y-2'>
             {message.contentType === 'image' ? (
               <img src={message.fileUrl} alt={message.fileName || 'image'} className='max-h-64 rounded-lg object-cover' />
+            ) : message.contentType === 'audio' ? (
+              <audio controls preload='metadata' className='w-full max-w-xs'>
+                <source src={message.fileUrl} type={message.mimeType || 'audio/webm'} />
+                Your browser does not support audio playback.
+              </audio>
+            ) : message.contentType === 'video' ? (
+              <video controls preload='metadata' className='max-h-64 rounded-lg'>
+                <source src={message.fileUrl} type={message.mimeType || 'video/mp4'} />
+                Your browser does not support video playback.
+              </video>
             ) : (
               <a
                 href={message.fileUrl}
@@ -61,8 +111,12 @@ function MessageBubbleInner({ message, isOwn, chatId }: MessageBubbleProps): JSX
         <div className='mt-1 flex items-center justify-end gap-2 text-[10px] opacity-80'>
           {message.isEdited && <span>edited</span>}
           <span>{format(new Date(message.createdAt), 'p')}</span>
-          {isOwn && <CheckCheck className='h-3 w-3' />}
+          {isOwn && statusIcon}
         </div>
+
+        {isOwn && message.status === 'read' && seenByNames && (
+          <p className='mt-1 text-right text-[10px] opacity-75'>Seen by {seenByNames}</p>
+        )}
 
         {reactions.length > 0 && (
           <div className='mt-1 flex flex-wrap gap-1'>

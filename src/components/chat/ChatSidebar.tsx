@@ -3,6 +3,7 @@ import { Search, MessageCircle, Circle } from 'lucide-react';
 import { useGetChatsQuery } from '@/services/chatApi';
 import { useGetNotificationsQuery } from '@/services/notificationApi';
 import { useSearchUsersQuery } from '@/services/userApi';
+import { useSearchGroupChatsQuery } from '@/services/chatApi';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { setSearchTerm, setSelectedChatId } from '@/features/chat/chatUiSlice';
@@ -22,12 +23,12 @@ function SidebarInner(): JSX.Element {
   const searchTerm = useAppSelector((state) => state.chatUi.searchTerm);
   const debouncedTerm = useDebounce(searchTerm, 350);
 
-  const { data: chatsData, isLoading } = useGetChatsQuery(undefined, { pollingInterval: 60000 });
-  const { data: notificationsData } = useGetNotificationsQuery(
-    { page: 1, limit: 100 },
-    { pollingInterval: 45000 },
-  );
+  const { data: chatsData, isLoading } = useGetChatsQuery();
+  const { data: notificationsData } = useGetNotificationsQuery({ page: 1, limit: 100 });
   const { data: usersData } = useSearchUsersQuery(debouncedTerm, { skip: debouncedTerm.length < 2 });
+  const { data: groupSearchData } = useSearchGroupChatsQuery(debouncedTerm, {
+    skip: debouncedTerm.length < 2,
+  });
 
   const [accessOrCreateChat] = useAccessOrCreateChatMutation();
 
@@ -89,6 +90,32 @@ function SidebarInner(): JSX.Element {
               <div className='min-w-0'>
                 <p className='truncate text-sm font-medium'>{user.name}</p>
                 <p className='truncate text-xs text-muted-foreground'>{user.email}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {debouncedTerm.length >= 2 && (groupSearchData?.data?.length ?? 0) > 0 && (
+        <div className='mb-3 space-y-1 rounded-lg border p-2'>
+          <p className='px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground'>
+            Groups
+          </p>
+          {groupSearchData?.data.map((chat) => (
+            <button
+              key={chat._id}
+              className='flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-muted'
+              onClick={() => dispatch(setSelectedChatId(chat._id))}
+            >
+              <Avatar className='h-8 w-8'>
+                <AvatarImage src={chat.avatar} />
+                <AvatarFallback>{(chat.name || 'G').slice(0, 1)}</AvatarFallback>
+              </Avatar>
+              <div className='min-w-0'>
+                <p className='truncate text-sm font-medium'>{chat.name || 'Untitled Group'}</p>
+                <p className='truncate text-xs text-muted-foreground'>
+                  {chat.lastMessage?.content || 'No messages yet'}
+                </p>
               </div>
             </button>
           ))}

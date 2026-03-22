@@ -4,6 +4,7 @@ export interface User {
   email: string;
   avatar?: string;
   bio?: string;
+  publicKey?: string;
   isOnline: boolean;
   lastSeen?: string;
   createdAt?: string;
@@ -17,6 +18,12 @@ export interface Chat {
   description?: string;
   avatar?: string;
   participants: User[];
+  mutedUsers?: Array<{
+    user: User;
+    mutedBy: User;
+    mutedUntil?: string;
+    reason?: string;
+  }>;
   admin?: User;
   groupAdmins?: User[];
   lastMessage?: Message;
@@ -37,8 +44,10 @@ export interface Message {
   fileName?: string;
   fileSize?: number;
   mimeType?: string;
+  isEncrypted?: boolean;
+  encryptedFor?: Record<string, string>;
   status: 'sent' | 'delivered' | 'read';
-  readBy: Array<{ user: string; readAt: string }>;
+  readBy: Array<{ user: string | Pick<User, '_id' | 'name' | 'avatar'>; readAt: string }>;
   deliveredTo: string[];
   replyTo?: Message;
   isDeleted: boolean;

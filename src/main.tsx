@@ -6,7 +6,10 @@ import { Toaster } from 'sonner';
 import { store } from '@/app/store';
 import { router } from '@/app/router';
 import { ThemeProvider } from '@/components/theme-provider';
+import { initBrowserNotifications } from '@/lib/browserNotifications';
 import '@/styles/globals.css';
+
+void initBrowserNotifications();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

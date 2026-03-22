@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { MessageComposer } from '@/components/chat/MessageComposer';
+import { CallControls } from '@/components/chat/CallControls';
 import { getChatTitle } from '@/lib/chat';
 
 interface ChatCenterPanelProps {
@@ -36,6 +37,10 @@ export function ChatCenterPanel({ chatId }: ChatCenterPanelProps): JSX.Element {
 
   const chat = chatData?.data;
   const title = chat ? getChatTitle(chat, currentUserId ?? '') : 'Select chat';
+  const directPeerId =
+    chat && !chat.isGroupChat
+      ? chat.participants.find((participant) => participant._id !== currentUserId)?._id
+      : undefined;
 
   const onLoadOlder = async (): Promise<void> => {
     setPage((p) => p + 1);
@@ -43,8 +48,7 @@ export function ChatCenterPanel({ chatId }: ChatCenterPanelProps): JSX.Element {
 
   const onMarkRead = async (): Promise<void> => {
     await markRead({ chatId });
-    const sender = chat?.participants.find((p) => p._id !== currentUserId);
-    if (sender) socketManager.emitMessageRead(chatId, sender._id);
+    socketManager.emitMessageRead(chatId);
   };
 
   return (
@@ -56,6 +60,7 @@ export function ChatCenterPanel({ chatId }: ChatCenterPanelProps): JSX.Element {
         </div>
 
         <div className='flex items-center gap-2'>
+          {!chat?.isGroupChat && <CallControls chatId={chatId} peerUserId={directPeerId} />}
           <div className='relative'>
             <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
             <Input

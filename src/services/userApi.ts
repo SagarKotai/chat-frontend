@@ -2,6 +2,14 @@ import { baseApi } from '@/services/baseApi';
 import type { ApiResponse } from '@/types/api';
 import type { User } from '@/types/entities';
 
+interface E2EEDeviceKey {
+  deviceId: string;
+  publicKey: string;
+  createdAt: string;
+  lastUsedAt: string;
+  revokedAt?: string;
+}
+
 export const userApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCurrentUserProfile: builder.query<ApiResponse<User>, void>({
@@ -24,6 +32,25 @@ export const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Users', 'Auth'],
     }),
+    getE2EEKeys: builder.query<ApiResponse<E2EEDeviceKey[]>, void>({
+      query: () => ({ url: '/users/me/e2ee-keys' }),
+      providesTags: ['Users'],
+    }),
+    upsertE2EEKey: builder.mutation<ApiResponse<E2EEDeviceKey[]>, { deviceId: string; publicKey: string }>({
+      query: (body) => ({
+        url: '/users/me/e2ee-keys',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Users'],
+    }),
+    revokeE2EEKey: builder.mutation<ApiResponse<E2EEDeviceKey[]>, { deviceId: string }>({
+      query: ({ deviceId }) => ({
+        url: `/users/me/e2ee-keys/${encodeURIComponent(deviceId)}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Users'],
+    }),
   }),
 });
 
@@ -32,4 +59,7 @@ export const {
   useGetUserProfileQuery,
   useSearchUsersQuery,
   useUpdateProfileMutation,
+  useGetE2EEKeysQuery,
+  useUpsertE2EEKeyMutation,
+  useRevokeE2EEKeyMutation,
 } = userApi;

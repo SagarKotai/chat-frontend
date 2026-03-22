@@ -20,7 +20,7 @@ export default function ChatPage(): JSX.Element {
   const dispatch = useAppDispatch();
   const selectedChatId = useAppSelector((state) => state.chatUi.selectedChatId);
   const rightPanelOpen = useAppSelector((state) => state.chatUi.rightPanelOpen);
-  const { data: chatsData } = useGetChatsQuery(undefined, { pollingInterval: 60000 });
+  const { data: chatsData } = useGetChatsQuery();
   const [logout] = useLogoutMutation();
 
   useEffect(() => {
